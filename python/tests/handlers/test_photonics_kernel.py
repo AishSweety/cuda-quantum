@@ -159,8 +159,6 @@ def test_target_handler():
         cudaq.sample(kernel)
 
 
-@pytest.mark.skip(
-    reason="Skip the tests which throw / raise to check CI status")
 def test_qudit_level():
 
     @cudaq.kernel
