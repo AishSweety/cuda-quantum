@@ -47,8 +47,6 @@ def test_qudit_list():
     assert '11' in counts
 
 
-@pytest.mark.skip(
-    reason="Skip the tests which throw / raise to check CI status")
 def test_qudit_invalid():
 
     @cudaq.kernel
