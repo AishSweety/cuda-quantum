@@ -109,8 +109,6 @@ def test_target_change():
     assert len(res) == 2 and '00' in res and '11' in res
 
 
-@pytest.mark.skip(
-    reason="Skip the tests which throw / raise to check CI status")
 def test_unsupported_gates():
 
     @cudaq.kernel
