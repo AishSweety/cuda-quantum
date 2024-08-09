@@ -240,8 +240,7 @@ struct AddFuncAttribute : public OpRewritePattern<LLVM::LLVMFuncOp> {
         rewriter.getStrArrayAttr(
             // TODO: change to required_num_results once providers support it
             // (issues #385 and #556)
-            {cudaq::opt::QIRRequiredResultsAttrName,
-             std::to_string(info.nResults)})});
+            {cudaq::opt::QIRRequiredResultsAttrName, requiredResultsStr})});
     op.setPassthroughAttr(arrAttr);
 
     // Stick the record calls in the exit block.
