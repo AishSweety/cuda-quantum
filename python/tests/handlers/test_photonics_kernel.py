@@ -144,8 +144,6 @@ def test_unsupported_types():
     assert "Qudit level not set" in repr(e)
 
 
-@pytest.mark.skip(
-    reason="Skip the tests which throw / raise to check CI status")
 def test_target_handler():
     cudaq.reset_target()
 
