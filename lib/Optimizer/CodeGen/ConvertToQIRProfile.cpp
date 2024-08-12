@@ -214,14 +214,16 @@ struct AddFuncAttribute : public OpRewritePattern<LLVM::LLVMFuncOp> {
     bool isAdaptive = convertTo == "qir-adaptive";
     const char *profileName = isAdaptive ? "adaptive_profile" : "base_profile";
 
-    StringRef requiredQubitsStr(std::to_string(info.nQubits));
+    auto requiredQubitsStr = std::to_string(info.nQubits);
+    StringRef requiredQubitsStrRef = requiredQubitsStr;
     if (auto stringAttr = op->getAttr(cudaq::opt::QIRRequiredQubitsAttrName)
                               .dyn_cast_or_null<mlir::StringAttr>())
-      requiredQubitsStr = stringAttr;
-    StringRef requiredResultsStr(std::to_string(info.nResults));
+      requiredQubitsStrRef = stringAttr;
+    auto requiredResultsStr = std::to_string(info.nResults);
+    StringRef requiredResultsStrRef = requiredResultsStr;
     if (auto stringAttr = op->getAttr(cudaq::opt::QIRRequiredResultsAttrName)
                               .dyn_cast_or_null<mlir::StringAttr>())
-      requiredResultsStr = stringAttr;
+      requiredResultsStrRef = stringAttr;
 
     // QIR functions need certain attributes, add them here.
     // TODO: Update schema_id with valid value (issues #385 and #556)
@@ -236,11 +238,11 @@ struct AddFuncAttribute : public OpRewritePattern<LLVM::LLVMFuncOp> {
         rewriter.getStrArrayAttr(
             // TODO: change to required_num_qubits once providers support it
             // (issues #385 and #556)
-            {cudaq::opt::QIRRequiredQubitsAttrName, requiredQubitsStr}),
+            {cudaq::opt::QIRRequiredQubitsAttrName, requiredQubitsStrRef}),
         rewriter.getStrArrayAttr(
             // TODO: change to required_num_results once providers support it
             // (issues #385 and #556)
-            {cudaq::opt::QIRRequiredResultsAttrName, requiredResultsStr})});
+            {cudaq::opt::QIRRequiredResultsAttrName, requiredResultsStrRef})});
     op.setPassthroughAttr(arrAttr);
 
     // Stick the record calls in the exit block.
