@@ -105,6 +105,11 @@ public:
       throw std::runtime_error("Failed to launch VQE. Error: " + errorMsg);
   }
 
+  void launchKernel(const std::string &name,
+                    const std::vector<void *> &rawArgs) override {
+    // FIXME
+  }
+
   void launchKernel(const std::string &name, void (*kernelFunc)(void *),
                     void *args, std::uint64_t voidStarSize,
                     std::uint64_t resultOffset) override {

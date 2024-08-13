@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "common/ArgumentConversion.h"
 #include "common/Environment.h"
 #include "common/ExecutionContext.h"
 #include "common/Executor.h"
@@ -347,12 +348,24 @@ public:
     return output_names;
   }
 
+  std::vector<cudaq::KernelExecution>
+  lowerQuakeCode(const std::string &kernelName, void *kernelArgs) {
+    return lowerQuakeCode(kernelName, kernelArgs, {});
+  }
+
+  std::vector<cudaq::KernelExecution>
+  lowerQuakeCode(const std::string &kernelName,
+                 const std::vector<void *> &rawArgs) {
+    return lowerQuakeCode(kernelName, nullptr, rawArgs);
+  }
+
   /// @brief Extract the Quake representation for the given kernel name and
   /// lower it to the code format required for the specific backend. The
   /// lowering process is controllable via the configuration file in the
   /// platform directory for the targeted backend.
   std::vector<cudaq::KernelExecution>
-  lowerQuakeCode(const std::string &kernelName, void *kernelArgs) {
+  lowerQuakeCode(const std::string &kernelName, void *kernelArgs,
+                 const std::vector<void *> &rawArgs) {
 
     auto [m_module, contextPtr, updatedArgs] =
         extractQuakeCodeAndContext(kernelName, kernelArgs);
@@ -402,10 +415,23 @@ public:
         throw std::runtime_error("Remote rest platform Quake lowering failed.");
     };
 
-    if (updatedArgs) {
-      cudaq::info("Run Quake Synth.\n");
+    if (!rawArgs.empty() || updatedArgs) {
       mlir::PassManager pm(&context);
-      pm.addPass(cudaq::opt::createQuakeSynthesizer(kernelName, updatedArgs));
+      if (!rawArgs.empty()) {
+        cudaq::info("Run Argument Synth.\n");
+        opt::ArgumentConverter argCon(kernelName, moduleOp);
+        argCon.gen(rawArgs);
+        mlir::SmallVector<mlir::StringRef> kernels = {kernelName};
+        std::string substBuff;
+        std::stringstream ss(substBuff);
+        ss << argCon.getSubstitutionModule();
+        mlir::SmallVector<mlir::StringRef> substs = {substBuff};
+        pm.addPass(opt::createArgumentSynthesisPass(kernels, substs));
+      } else if (updatedArgs) {
+        cudaq::info("Run Quake Synth.\n");
+        mlir::PassManager pm(&context);
+        pm.addPass(cudaq::opt::createQuakeSynthesizer(kernelName, updatedArgs));
+      }
       pm.addPass(mlir::createCanonicalizerPass());
       if (disableMLIRthreading || enablePrintMLIREachPass)
         moduleOp.getContext()->disableMultithreading();
@@ -513,6 +539,21 @@ public:
     return codes;
   }
 
+  void launchKernel(const std::string &kernelName,
+                    const std::vector<void *> &rawArgs) override {
+    cudaq::info("launching remote rest kernel ({})", kernelName);
+
+    // TODO future iterations of this should support non-void return types.
+    if (!executionContext)
+      throw std::runtime_error(
+          "Remote rest execution can only be performed via cudaq::sample(), "
+          "cudaq::observe(), or cudaq::draw().");
+
+    // Get the Quake code, lowered according to config file.
+    auto codes = lowerQuakeCode(kernelName, rawArgs);
+    completeLaunchKernel(kernelName, std::move(codes));
+  }
+
   /// @brief Launch the kernel. Extract the Quake code and lower to
   /// the representation required by the targeted backend. Handle all pertinent
   /// modifications for the execution context as well as asynchronous or
@@ -530,6 +571,11 @@ public:
 
     // Get the Quake code, lowered according to config file.
     auto codes = lowerQuakeCode(kernelName, args);
+    completeLaunchKernel(kernelName, std::move(codes));
+  }
+
+  void completeLaunchKernel(const std::string &kernelName,
+                            std::vector<cudaq::KernelExecution> &&codes) {
 
     // After performing lowerQuakeCode, check to see if we are simply drawing
     // the circuit. If so, perform the trace here and then return.
