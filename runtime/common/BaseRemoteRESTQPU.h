@@ -18,6 +18,7 @@
 #include "common/RuntimeMLIR.h"
 #include "cudaq.h"
 #include "cudaq/Frontend/nvqpp/AttributeNames.h"
+#include "cudaq/Optimizer/Builder/Runtime.h"
 #include "cudaq/Optimizer/CodeGen/OpenQASMEmitter.h"
 #include "cudaq/Optimizer/CodeGen/Passes.h"
 #include "cudaq/Optimizer/Dialect/CC/CCDialect.h"
@@ -113,7 +114,8 @@ protected:
   /// @brief Invoke the kernel in the JIT engine
   void invokeJITKernel(mlir::ExecutionEngine *jit,
                        const std::string &kernelName) {
-    auto funcPtr = jit->lookup(std::string("__nvqpp__mlirgen__") + kernelName);
+    auto funcPtr = jit->lookup(std::string(cudaq::runtime::cudaqGenPrefixName) +
+                               kernelName);
     if (!funcPtr) {
       throw std::runtime_error(
           "cudaq::builder failed to get kernelReg function.");
@@ -374,7 +376,7 @@ public:
 
     // Extract the kernel name
     auto func = m_module.lookupSymbol<mlir::func::FuncOp>(
-        std::string("__nvqpp__mlirgen__") + kernelName);
+        std::string(cudaq::runtime::cudaqGenPrefixName) + kernelName);
 
     // Create a new Module to clone the function into
     auto location = mlir::FileLineColLoc::get(&context, "<builder>", 1, 1);
@@ -421,15 +423,18 @@ public:
         cudaq::info("Run Argument Synth.\n");
         opt::ArgumentConverter argCon(kernelName, moduleOp);
         argCon.gen(rawArgs);
-        mlir::SmallVector<mlir::StringRef> kernels = {kernelName};
+        std::string kernName = cudaq::runtime::cudaqGenPrefixName + kernelName;
+        mlir::StringRef sr{kernName};
+        mlir::SmallVector<mlir::StringRef> kernels = {sr};
         std::string substBuff;
-        std::stringstream ss(substBuff);
+        llvm::raw_string_ostream ss(substBuff);
         ss << argCon.getSubstitutionModule();
-        mlir::SmallVector<mlir::StringRef> substs = {substBuff};
-        pm.addPass(opt::createArgumentSynthesisPass(kernels, substs));
+        mlir::StringRef su{substBuff};
+        mlir::SmallVector<mlir::StringRef> substs = {su};
+        pm.addNestedPass<mlir::func::FuncOp>(
+            opt::createArgumentSynthesisPass(kernels, substs));
       } else if (updatedArgs) {
         cudaq::info("Run Quake Synth.\n");
-        mlir::PassManager pm(&context);
         pm.addPass(cudaq::opt::createQuakeSynthesizer(kernelName, updatedArgs));
       }
       pm.addPass(mlir::createCanonicalizerPass());
@@ -444,7 +449,7 @@ public:
     runPassPipeline(passPipelineConfig, moduleOp);
 
     auto entryPointFunc = moduleOp.lookupSymbol<mlir::func::FuncOp>(
-        std::string("__nvqpp__mlirgen__") + kernelName);
+        std::string(cudaq::runtime::cudaqGenPrefixName) + kernelName);
     std::vector<std::size_t> mapping_reorder_idx;
     if (auto mappingAttr = dyn_cast_if_present<mlir::ArrayAttr>(
             entryPointFunc->getAttr("mapping_reorder_idx"))) {
@@ -474,7 +479,7 @@ public:
 
         // Get the ansatz
         auto ansatz = moduleOp.lookupSymbol<mlir::func::FuncOp>(
-            std::string("__nvqpp__mlirgen__") + kernelName);
+            std::string(cudaq::runtime::cudaqGenPrefixName) + kernelName);
 
         // Create a new Module to clone the ansatz into it
         auto tmpModuleOp = builder.create<mlir::ModuleOp>();

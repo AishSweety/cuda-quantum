@@ -107,7 +107,7 @@ public:
 
   void launchKernel(const std::string &name,
                     const std::vector<void *> &rawArgs) override {
-    // FIXME
+    throw std::runtime_error("launch kernel on raw args not implemented");
   }
 
   void launchKernel(const std::string &name, void (*kernelFunc)(void *),

@@ -177,7 +177,7 @@ public:
                     std::uint64_t resultOffset) override;
   void launchKernel(const std::string &kernelName,
                     const std::vector<void *> &rawArgs) override {
-     // FIXME
+    throw std::runtime_error("launch kernel on raw args not implemented");
   }
 };
 
