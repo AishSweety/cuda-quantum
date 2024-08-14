@@ -1146,7 +1146,7 @@ class Dendrogram:
         plt.show()
 
 
-class Voironi_Tessalation:
+class Voronoi_Tessalation:
 
     def __init__(
         self,
