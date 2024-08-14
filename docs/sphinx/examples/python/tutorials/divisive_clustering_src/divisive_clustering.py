@@ -1237,7 +1237,7 @@ class Voironi_Tessalation:
 
         return new_regions, np.asarray(new_vertices)
 
-    def plot_voironi(
+    def plot_voronoi(
         self,
         plot_title: Optional[str] = "Voronoi Tessalation",
         show_annotation: bool = False,
