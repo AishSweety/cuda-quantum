@@ -1237,7 +1237,7 @@ class Voironi_Tessalation:
 
         return new_regions, np.asarray(new_vertices)
 
-    def plot_voironi(
+    def plot_voronoi(
         self,
         plot_title: Optional[str] = "Voronoi Tessalation",
         show_annotation: bool = False,
@@ -1250,7 +1250,8 @@ class Voironi_Tessalation:
         for j, region in enumerate(regions):
             polygon = vertices[region]
             color = self.coreset_df.color[j]
-            breakpoint()
+            #uncomment for debugging point
+            #breakpoint() 
             plt.fill(*zip(*polygon), alpha=0.4, color=color, linewidth=0)
             if show_annotation:
                 plt.annotate(
